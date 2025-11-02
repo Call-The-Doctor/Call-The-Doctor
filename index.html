@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>0 → losowe 1–21 → restart (z Back)</title>
+  <title>0 → losowe 1–21 → restart (Back + klik = Next)</title>
   <style>
     html,body{margin:0;width:100%;height:100%;background:#000}
     img{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;
@@ -17,38 +17,39 @@
 </head>
 <body>
 
-<div id="back" class="disabled">Back</div>
+<div id="back" class="disabled" aria-disabled="true">Back</div>
 <div id="counter">0 / 21</div>
-<img id="viewer" alt="viewer">
+<img id="viewer" alt="viewer" draggable="false">
 
 <script>
 /* ── konfiguracja ───────────────────────────── */
-const IMG_FOLDER = 'img/';   // gdzie są obrazy 0.jpg ... 21.jpg
+const IMG_FOLDER = 'img/';   // pliki: 0.jpg, 1.jpg, ... 21.jpg
 const EXT        = '.jpg';
 const MIN_IMG    = 1;
 const MAX_IMG    = 21;
 /* ───────────────────────────────────────────── */
 
-const $img = document.getElementById('viewer');
-const $cnt = document.getElementById('counter');
-const $back= document.getElementById('back');
+const $img  = document.getElementById('viewer');
+const $cnt  = document.getElementById('counter');
+const $back = document.getElementById('back');
 
-let queue = [];   // wylosowana kolejność [1..21]
-let idx   = -1;   // -1 oznacza ekran startowy 0.jpg
+let queue = [];   // wylosowana, stała na rundę kolejność [1..21]
+let idx   = -1;   // -1 = ekran startowy (0.jpg)
 
-function shuffle(array){
-  for(let i=array.length-1;i>0;i--){
+/* --- narzędzia --- */
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return array;
+  return a;
 }
 
-function makeQueue(){
+function newRound(){
   queue = [];
   for(let n = MIN_IMG; n <= MAX_IMG; n++) queue.push(n);
   shuffle(queue);
-  idx = -1; // po utworzeniu kolejki zaczynamy od 0.jpg
+  idx = -1;        // zaczynamy od 0.jpg
   render();
 }
 
@@ -58,37 +59,45 @@ function render(){
     $cnt.textContent = `0 / ${MAX_IMG}`;
   } else {
     const n = queue[idx];
-    $img.src = IMG_FOLDER + String(n) + EXT;
+    $img.src = IMG_FOLDER + n + EXT;
     $cnt.textContent = `${idx+1} / ${MAX_IMG}`;
   }
-  $back.classList.toggle('disabled', idx === -1);
+  const isDisabled = idx === -1;
+  $back.classList.toggle('disabled', isDisabled);
+  $back.setAttribute('aria-disabled', String(isDisabled));
 }
 
+/* --- nawigacja --- */
 function next(){
   if(idx === -1){ idx = 0; render(); return; }
   if(idx < queue.length - 1){ idx++; render(); return; }
-  // skończyliśmy 1..21 → restart z nową kolejnością
-  makeQueue();
+  // koniec kolejki → restart z nową kolejnością i powrót na 0.jpg
+  newRound();
 }
 
 function prev(){
   if(idx === -1) return; // już na 0.jpg
-  idx--;                 // cofnij (może zejść do -1 = 0.jpg)
+  idx--;
   render();
 }
 
-// kliknięcia
+/* --- zdarzenia --- */
+// klik w obraz = dalej
 $img.addEventListener('click', next);
-$back.addEventListener('click', () => { if(!$back.classList.contains('disabled')) prev(); });
 
-// także klawiatura: strzałki ← → i spacja (dalej)
+// Back przyciskiem
+$back.addEventListener('click', () => {
+  if(!$back.classList.contains('disabled')) prev();
+});
+
+// (opcjonalnie) obsługa klawiatury: ← cofnij, →/Space dalej
 window.addEventListener('keydown', (e) => {
   if(e.key === 'ArrowRight' || e.key === ' ') next();
   else if(e.key === 'ArrowLeft') prev();
 });
 
 // start
-makeQueue();
+newRound();
 </script>
 </body>
 </html>
