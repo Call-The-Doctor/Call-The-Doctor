@@ -3,17 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>0 → losowe 1–21 → restart</title>
+  <title>0 → losowe 1–21 → restart (z Back)</title>
   <style>
     html,body{margin:0;width:100%;height:100%;background:#000}
     img{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;
         object-position:center;user-select:none;cursor:pointer}
     #counter{position:fixed;top:12px;right:12px;padding:6px 10px;background:rgba(255,255,255,.2);
              color:#fff;font:bold 18px sans-serif;border-radius:4px;z-index:9;pointer-events:none}
+    #back{position:fixed;top:12px;left:12px;padding:6px 10px;background:rgba(255,255,255,.2);
+          color:#fff;font:bold 16px sans-serif;border-radius:4px;z-index:9;user-select:none;cursor:pointer}
+    #back.disabled{opacity:.4;cursor:default}
   </style>
 </head>
 <body>
 
+<div id="back" class="disabled">Back</div>
 <div id="counter">0 / 21</div>
 <img id="viewer" alt="viewer">
 
@@ -27,6 +31,7 @@ const MAX_IMG    = 21;
 
 const $img = document.getElementById('viewer');
 const $cnt = document.getElementById('counter');
+const $back= document.getElementById('back');
 
 let queue = [];   // wylosowana kolejność [1..21]
 let idx   = -1;   // -1 oznacza ekran startowy 0.jpg
@@ -49,7 +54,6 @@ function makeQueue(){
 
 function render(){
   if(idx === -1){
-    // ekran startowy
     $img.src = IMG_FOLDER + '0' + EXT;
     $cnt.textContent = `0 / ${MAX_IMG}`;
   } else {
@@ -57,29 +61,33 @@ function render(){
     $img.src = IMG_FOLDER + String(n) + EXT;
     $cnt.textContent = `${idx+1} / ${MAX_IMG}`;
   }
+  $back.classList.toggle('disabled', idx === -1);
 }
 
 function next(){
-  // jeśli byliśmy na 0.jpg, przejdź do pierwszego w kolejce
-  if(idx === -1){
-    idx = 0;
-    render();
-    return;
-  }
-  // jeśli są jeszcze elementy w kolejce – następny
-  if(idx < queue.length - 1){
-    idx++;
-    render();
-    return;
-  }
-  // skończyliśmy 1..21 → restart: znów 0.jpg i nowa kolejność
+  if(idx === -1){ idx = 0; render(); return; }
+  if(idx < queue.length - 1){ idx++; render(); return; }
+  // skończyliśmy 1..21 → restart z nową kolejnością
   makeQueue();
 }
 
-// kliknięcie przechodzi dalej
-$img.addEventListener('click', next);
+function prev(){
+  if(idx === -1) return; // już na 0.jpg
+  idx--;                 // cofnij (może zejść do -1 = 0.jpg)
+  render();
+}
 
-// uruchomienie
+// kliknięcia
+$img.addEventListener('click', next);
+$back.addEventListener('click', () => { if(!$back.classList.contains('disabled')) prev(); });
+
+// także klawiatura: strzałki ← → i spacja (dalej)
+window.addEventListener('keydown', (e) => {
+  if(e.key === 'ArrowRight' || e.key === ' ') next();
+  else if(e.key === 'ArrowLeft') prev();
+});
+
+// start
 makeQueue();
 </script>
 </body>
